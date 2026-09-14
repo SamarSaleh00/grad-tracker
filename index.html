@@ -1,0 +1,1481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Samar's Grad School Mission Control</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #0c1420;
+    --panel: #121d2c;
+    --panel-2: #16223333;
+    --panel-raised: #17253699;
+    --line: #24344a;
+    --line-soft: #1b2839;
+    --text: #e8eef6;
+    --text-dim: #93a4bb;
+    --text-faint: #5f7089;
+    --amber: #e3a545;
+    --cyan: #55c2d6;
+    --green: #6fd39a;
+    --red: #e2687e;
+    --violet: #a48bf0;
+    --radius: 10px;
+    --mono: 'IBM Plex Mono', monospace;
+    --sans: 'Inter', sans-serif;
+    --display: 'Space Grotesk', sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background: radial-gradient(1200px 600px at 15% -10%, #16243a 0%, transparent 60%), var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 14px;
+    line-height: 1.5;
+    min-height: 100vh;
+  }
+  ::selection{ background: var(--cyan); color:#04141a; }
+  a{ color: var(--cyan); }
+
+  /* ---------- Layout ---------- */
+  #app{ display:flex; min-height:100vh; }
+
+  .sidebar{
+    width: 236px; flex: none;
+    background: linear-gradient(180deg, #0e1826, #0a121d);
+    border-right: 1px solid var(--line-soft);
+    padding: 22px 14px;
+    position: sticky; top:0; height:100vh; overflow-y:auto;
+  }
+  .brand{
+    font-family: var(--display); font-weight:700; font-size:15px;
+    letter-spacing: .01em; color: var(--text); padding: 0 8px 4px;
+  }
+  .brand small{ display:block; font-family: var(--mono); font-weight:400; font-size:10.5px; color: var(--text-faint); margin-top:4px; letter-spacing:.02em;}
+  .nav{ margin-top: 26px; display:flex; flex-direction:column; gap:2px; }
+  .nav-item{
+    display:flex; align-items:center; gap:10px;
+    padding: 9px 10px; border-radius: 8px; cursor:pointer;
+    color: var(--text-dim); font-size: 13.5px; font-weight:500;
+    border: 1px solid transparent;
+    user-select:none;
+  }
+  .nav-item:hover{ background: #ffffff08; color:var(--text); }
+  .nav-item.active{ background:#ffffff0d; color: var(--text); border-color: var(--line); }
+  .nav-item .dot{ width:6px; height:6px; border-radius:50%; background: var(--text-faint); flex:none; }
+  .nav-item.active .dot{ background: var(--cyan); box-shadow: 0 0 8px var(--cyan); }
+  .nav-count{ margin-left:auto; font-family: var(--mono); font-size: 11px; color: var(--text-faint); }
+
+  .sidebar-foot{ margin-top: 28px; padding: 12px 10px; border-top: 1px solid var(--line-soft); }
+  .sidebar-foot .label{ font-size:10.5px; text-transform:none; color:var(--text-faint); font-family: var(--mono); }
+  .save-indicator{ display:flex; align-items:center; gap:6px; margin-top:8px; font-size:12px; color:var(--text-dim); }
+  .save-dot{ width:6px;height:6px;border-radius:50%; background: var(--green); }
+  .save-dot.saving{ background: var(--amber); animation: pulse 1s infinite; }
+  @keyframes pulse{ 0%,100%{opacity:1;} 50%{opacity:.35;} }
+
+  .main{ flex:1; min-width:0; padding: 30px 34px 80px; max-width: 1180px; }
+  .page-head{ margin-bottom: 22px; }
+  .page-head h1{ font-family: var(--display); font-size: 23px; margin:0 0 6px; font-weight:700; }
+  .page-head p{ margin:0; color: var(--text-dim); font-size: 13.5px; max-width: 640px;}
+
+  /* ---------- Cards / KPIs ---------- */
+  .kpi-row{ display:grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 22px; }
+  .kpi{
+    background: var(--panel); border:1px solid var(--line-soft); border-radius: var(--radius);
+    padding: 14px 16px;
+  }
+  .kpi .num{ font-family: var(--mono); font-size: 26px; font-weight:600; color:var(--text); }
+  .kpi .lbl{ font-size: 12px; color: var(--text-dim); margin-top:2px; }
+  .kpi .sub{ font-size: 11px; color: var(--text-faint); margin-top:6px; }
+
+  .panel{
+    background: var(--panel); border:1px solid var(--line-soft); border-radius: var(--radius);
+    padding: 18px; margin-bottom: 18px;
+  }
+  .panel h2{ font-family: var(--display); font-size: 15px; margin: 0 0 12px; font-weight:600; display:flex; align-items:center; gap:8px;}
+  .panel h2 .n{ font-family: var(--mono); color: var(--text-faint); font-weight:400; font-size:12px; }
+
+  .two-col{ display:grid; grid-template-columns: 1.3fr 1fr; gap: 16px; align-items:start; }
+  @media (max-width: 900px){ .two-col{ grid-template-columns: 1fr; } .kpi-row{ grid-template-columns: repeat(2,1fr);} }
+
+  .todo-item{ display:flex; gap:10px; align-items:flex-start; padding: 9px 0; border-bottom: 1px solid var(--line-soft); font-size:13px;}
+  .todo-item:last-child{ border-bottom:none; }
+  .todo-tag{ font-family:var(--mono); font-size:10px; padding:2px 6px; border-radius:5px; flex:none; margin-top:1px; }
+  .tag-portal{ background:#3a2c15; color:var(--amber); }
+  .tag-doc{ background:#182f3d; color:var(--cyan); }
+  .tag-test{ background:#2a1f3d; color:var(--violet); }
+  .tag-deadline{ background:#3a1c22; color:var(--red); }
+
+  .ring-wrap{ display:flex; align-items:center; gap:16px; }
+  .ring{ flex:none; }
+  .ring-label{ font-size:12px; color:var(--text-dim); }
+  .ring-label b{ display:block; color:var(--text); font-family:var(--mono); font-size:20px; font-weight:600; }
+
+  /* ---------- Controls ---------- */
+  .toolbar{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom: 14px; }
+  input[type=text].search{
+    background: var(--panel); border:1px solid var(--line); color:var(--text);
+    padding: 8px 12px; border-radius: 8px; font-size:13px; width: 230px; font-family: var(--sans);
+  }
+  input[type=text].search::placeholder{ color: var(--text-faint); }
+  select, input[type=date], input[type=number], textarea, input[type=text].field, input[type=url]{
+    background: #0e1826; border:1px solid var(--line); color:var(--text);
+    padding: 6px 9px; border-radius: 7px; font-size: 12.5px; font-family: var(--sans);
+  }
+  select:focus, input:focus, textarea:focus{ outline: 1.5px solid var(--cyan); border-color: var(--cyan); }
+  .chip-toggle{
+    display:flex; gap:6px; flex-wrap:wrap;
+  }
+  .chip{
+    padding: 6px 11px; border-radius: 999px; border:1px solid var(--line); color: var(--text-dim);
+    font-size:12px; cursor:pointer; user-select:none; background:transparent;
+  }
+  .chip:hover{ border-color: var(--text-faint); color: var(--text); }
+  .chip.active{ background: var(--cyan); color:#04141a; border-color: var(--cyan); font-weight:600; }
+  .spacer{ flex:1; }
+  .btn{
+    background: var(--cyan); color:#04141a; border:none; padding: 7px 13px; border-radius:7px;
+    font-weight:600; font-size:12.5px; cursor:pointer; font-family:var(--sans);
+  }
+  .btn:hover{ filter:brightness(1.08); }
+  .btn.ghost{ background:transparent; border:1px solid var(--line); color: var(--text-dim); }
+  .btn.ghost:hover{ color:var(--text); border-color:var(--text-faint); }
+  .btn.small{ padding: 4px 9px; font-size:11.5px; }
+  .btn.danger{ background: transparent; border:1px solid #4a2530; color: var(--red); }
+
+  /* ---------- Program cards ---------- */
+  .program-list{ display:flex; flex-direction:column; gap:10px; }
+  .program-card{
+    background: var(--panel); border:1px solid var(--line-soft); border-radius: var(--radius);
+    overflow:hidden;
+  }
+  .program-head{
+    display:flex; align-items:center; gap:12px; padding: 13px 16px; cursor:pointer;
+  }
+  .program-head:hover{ background:#ffffff05; }
+  .uni-name{ font-weight:600; font-size:14px; color:var(--text); }
+  .prog-name{ font-size:12.5px; color: var(--text-dim); margin-top:1px; }
+  .status-pill{
+    font-family: var(--mono); font-size: 10.5px; padding: 4px 9px; border-radius: 999px;
+    text-transform:none; flex:none; white-space:nowrap; border:1px solid transparent;
+  }
+  .st-Wishlist{ background:#1b2839; color:var(--text-dim); border-color:var(--line); }
+  .st-Preparing{ background:#3a2c15; color:var(--amber); border-color:#5a4520; }
+  .st-Submitted{ background:#132c3a; color:var(--cyan); border-color:#1f4c5c; }
+  .st-Interview{ background:#2a1f3d; color:var(--violet); border-color:#3f2f5c; }
+  .st-Offer{ background:#173a29; color:var(--green); border-color:#245c3f; }
+  .st-Accepted{ background:#173a29; color:var(--green); border-color:var(--green); }
+  .st-Rejected{ background:#3a1c22; color:var(--red); border-color:#5c2a34; }
+  .st-Declined{ background:#1b2839; color:var(--text-faint); border-color:var(--line); }
+
+  .portal-flag{ font-size:11px; font-family:var(--mono); padding:3px 8px; border-radius:6px; flex:none; white-space:nowrap;}
+  .pf-open{ background:#173a29; color:var(--green); }
+  .pf-soon{ background:#3a2c15; color:var(--amber); }
+  .pf-none{ background:#1b2839; color:var(--text-faint); }
+
+  .mini-progress{ width:56px; height:5px; background:#1b2839; border-radius:3px; overflow:hidden; flex:none; }
+  .mini-progress i{ display:block; height:100%; background: var(--cyan); }
+
+  .chev{ color: var(--text-faint); transition: transform .15s ease; flex:none; }
+  .program-card.open .chev{ transform: rotate(90deg); }
+
+  .program-body{ display:none; padding: 4px 16px 18px; border-top:1px solid var(--line-soft); }
+  .program-card.open .program-body{ display:block; }
+
+  .field-grid{ display:grid; grid-template-columns: repeat(3, 1fr); gap: 12px 16px; margin-top:14px; }
+  @media (max-width: 760px){ .field-grid{ grid-template-columns: 1fr 1fr; } }
+  .field{ display:flex; flex-direction:column; gap:5px; }
+  .field label{ font-size: 10.5px; color: var(--text-faint); font-family:var(--mono); text-transform:none; }
+  .field .readout{ font-size:13px; color:var(--text); }
+
+  .tag-row{ display:flex; gap:6px; flex-wrap:wrap; margin-top: 10px; }
+  .tag{ font-size:11px; padding:3px 8px; border-radius:6px; background:#1b2839; color:var(--text-dim); border:1px solid var(--line); }
+  .tag.req{ color: var(--violet); border-color:#3f2f5c; background:#221a33; }
+  .tag.sch{ color: var(--amber); border-color:#5a4520; background:#2a2010; cursor:default; }
+
+  textarea.notes{ width:100%; min-height: 54px; resize:vertical; margin-top:10px; font-size:12.5px; }
+
+  /* ---------- Documents ---------- */
+  .doc-grid{ display:grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  @media (max-width: 820px){ .doc-grid{ grid-template-columns: 1fr; } }
+  .doc-card{ background: var(--panel); border:1px solid var(--line-soft); border-radius: var(--radius); padding: 14px 16px; }
+  .doc-top{ display:flex; justify-content:space-between; align-items:flex-start; gap:10px;}
+  .doc-name{ font-weight:600; font-size:13.5px; }
+  .doc-type{ font-size:10.5px; color:var(--text-faint); font-family:var(--mono); margin-top:2px;}
+  .doc-scope{ font-size:11px; color:var(--text-faint); margin-top:8px; }
+  .doc-controls{ display:flex; gap:8px; margin-top:10px; align-items:center; }
+
+  /* ---------- Scholarships ---------- */
+  .sch-card{ background: var(--panel); border:1px solid var(--line-soft); border-radius: var(--radius); padding: 14px 16px; margin-bottom:10px; }
+  .sch-head{ display:flex; justify-content:space-between; gap:10px; align-items:flex-start; flex-wrap:wrap; }
+  .sch-name{ font-weight:600; font-size:14px; }
+  .sch-note{ font-size:12px; color: var(--text-dim); margin-top:4px; max-width:560px; }
+  .sch-grid{ display:grid; grid-template-columns: repeat(4,1fr); gap:10px 14px; margin-top:12px; }
+  @media (max-width: 900px){ .sch-grid{ grid-template-columns: repeat(2,1fr);} }
+
+  .resp-Not-Applied{ color: var(--text-dim); }
+  .resp-Preparing{ color: var(--amber); }
+  .resp-Applied{ color: var(--cyan); }
+  .resp-Awaiting-Decision{ color: var(--violet); }
+  .resp-Awarded{ color: var(--green); }
+  .resp-Rejected{ color: var(--red); }
+
+  /* ---------- Contacts ---------- */
+  .contact-card{ background: var(--panel); border:1px solid var(--line-soft); border-radius: var(--radius); padding:14px 16px; margin-bottom:10px; display:flex; gap:14px; flex-wrap:wrap; align-items:flex-start;}
+  .avatar{ width:38px;height:38px;border-radius:50%; background: linear-gradient(135deg,var(--cyan),var(--violet)); display:flex;align-items:center;justify-content:center; font-family:var(--display); font-weight:700; color:#04141a; flex:none;}
+
+  /* ---------- Guide ---------- */
+  .guide-item{ padding: 12px 0; border-bottom:1px solid var(--line-soft); }
+  .guide-item:last-child{ border-bottom:none; }
+  .guide-item h3{ margin:0 0 4px; font-size:13.5px; font-family:var(--display); }
+  .guide-item p{ margin:0; font-size:13px; color: var(--text-dim); }
+
+  .empty{ text-align:center; color: var(--text-faint); padding: 40px 0; font-size:13px; }
+
+  ::-webkit-scrollbar{ width:9px; height:9px; }
+  ::-webkit-scrollbar-thumb{ background:#22344a; border-radius:6px; }
+  ::-webkit-scrollbar-track{ background:transparent; }
+
+  @media (max-width: 700px){
+    .sidebar{ display:none; }
+    .main{ padding: 18px 16px 60px; }
+    .kpi-row{ grid-template-columns: repeat(2,1fr); }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="sidebar">
+    <div class="brand">Mission Control<small>MSc Robotics &amp; AI · Samar Saleh</small></div>
+    <div class="nav" id="nav"></div>
+    <div class="sidebar-foot">
+      <div class="label">STATUS</div>
+      <div class="save-indicator"><div class="save-dot" id="saveDot"></div><span id="saveText">Synced</span></div>
+      <div style="margin-top:14px; display:flex; flex-direction:column; gap:6px;">
+        <button class="btn ghost small" id="exportBtn" style="width:100%;">⭳ Export backup</button>
+        <button class="btn ghost small" id="importBtn" style="width:100%;">⭱ Import backup</button>
+        <input type="file" id="importFile" accept="application/json" style="display:none;">
+        <div style="font-size:10.5px; color:var(--text-faint); margin-top:2px; line-height:1.4;">
+          Export downloads your data as one file. Bring it to another laptop and Import to restore everything there.
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="main" id="main"></div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+(function(){
+"use strict";
+
+/* ============================================================
+   RAW DATA — pulled from Samar's Notion export
+   ============================================================ */
+
+const TODAY = new Date("2026-09-13T00:00:00");
+
+const DOCS = [
+  { id:"doc_ps", name:"Personal Statement — general base draft (\"Building Structures\")", type:"SOP",
+    scope:"The shared narrative every tailored version starts from — not university-specific itself.", defaultStatus:"Needs Tailoring",
+    defaultNotes:"Core narrative drafted with a modular paragraph swapped per program.", core:true },
+  { id:"doc_transcript", name:"General Academic Transcript", type:"Transcript",
+    scope:"Used by every program", defaultStatus:"Not Started", defaultNotes:"", core:true },
+  { id:"doc_lor1", name:"Letter of Recommendation 1 (required)", type:"LOR",
+    scope:"Used by every program", defaultStatus:"Not Started", defaultNotes:"", core:true },
+  { id:"doc_lor2", name:"Letter of Recommendation 2 (required)", type:"LOR",
+    scope:"Used by every program", defaultStatus:"Not Started", defaultNotes:"", core:true },
+  { id:"doc_lor3", name:"Letter of Recommendation 3 (optional)", type:"LOR",
+    scope:"Extra reference — only where a program allows/wants a third", defaultStatus:"Not Started", defaultNotes:"", core:false },
+  { id:"doc_lor4", name:"Letter of Recommendation 4 (optional)", type:"LOR",
+    scope:"Extra reference — only where a program allows/wants a fourth", defaultStatus:"Not Started", defaultNotes:"", core:false },
+  { id:"doc_duolingo", name:"Duolingo English Test Score", type:"English Test",
+    scope:"Used by every program that accepts Duolingo", defaultStatus:"Not Started",
+    defaultNotes:"Target score: at least 120. All shortlisted universities confirmed to accept Duolingo.", core:true },
+  { id:"doc_oxford_ellt", name:"Oxford ELLT Score", type:"English Test",
+    scope:"Used by every program that accepts Oxford ELLT instead of/alongside Duolingo", defaultStatus:"Not Started",
+    defaultNotes:"Log your band once you sit the test.", core:true },
+  { id:"doc_moi", name:"Medium of Instruction (MOI) Letter", type:"MOI",
+    scope:"Used by programs that accept an MOI letter instead of an English test", defaultStatus:"Not Started",
+    defaultNotes:"Issued by UCAS — confirms your degree was taught in English.", core:true },
+  { id:"doc_grad_letter", name:"Expected Graduation Letter (July 2027 + GPA)", type:"Enrollment Confirmation",
+    scope:"Used by every program", defaultStatus:"Not Started",
+    defaultNotes:"Confirms expected graduation date and current GPA.", core:true },
+  { id:"doc_cv", name:"CV / Résumé — Master's Applications", type:"CV/Résumé",
+    scope:"Used by every program", defaultStatus:"Not Started", defaultNotes:"", core:true },
+  { id:"doc_bristol_essay", name:"Bristol Sanctuary Scholarship Essay", type:"Scholarship Essay",
+    scope:"Bristol only", defaultStatus:"Drafting",
+    defaultNotes:"Incorporates Bristol-specific details (Isambard-AI supercomputer).", core:false },
+];
+const PS_TAILOR_OPTIONS = ["Not Started","Drafting","Ready"];
+
+// Each scholarship group lists which universities it covers, plus a per-university
+// deadline where one could be found. "confirmed" = published for the 2027/28 cycle
+// itself. "estimated" = the most recent cycle's date, shifted forward one year, per
+// your instruction. "unverified" = nothing findable — worth checking directly.
+const SCHOLARSHIP_GROUPS = [
+  { key:"bseisu", name:"Bseisu Scholarship",
+    notes:"Offered at Glasgow, UCL, Edinburgh, Imperial, King's College London and Warwick only.",
+    unis:[
+      {uni:"University of Glasgow", deadline:"2027-05-01", confidence:"estimated"},
+      {uni:"UCL", deadline:"2027-05-07", confidence:"estimated"},
+      {uni:"University of Edinburgh", deadline:"2027-03-13", confidence:"estimated"},
+      {uni:"Imperial College London", deadline:"2027-04-10", confidence:"estimated"},
+      {uni:"King's College London", deadline:"", confidence:"unverified", extraNote:"No standalone Bseisu-KCL page found — Bseisu partners with King's via Chevening-Bseisu Scholarships, which run on Chevening's own cycle (opens ~August, closes ~early November). Check chevening.org and King's funding pages directly."},
+      {uni:"University of Warwick", deadline:"2027-04-15", confidence:"estimated", extraNote:"This is the Bseisu-WMG Scholarship — both your Warwick programmes (Applied AI, Smart Connected & Autonomous Vehicles) sit under WMG, so both qualify."},
+    ] },
+  { key:"human", name:"Humanitarian Scholarship",
+    notes:"Covers Glasgow and UCL.",
+    unis:[
+      {uni:"University of Glasgow", deadline:"", confidence:"unverified", extraNote:"Glasgow's page says this scholarship is closed and 'will open in October 2026 for the 2027/2028 academic year' — exactly your cycle. Deadline not yet published; check back after it opens."},
+      {uni:"UCL", deadline:"2027-05-07", confidence:"estimated"},
+    ] },
+  { key:"said", name:"Saïd Foundation Scholarship",
+    notes:"One single application to the Foundation covers all six partner universities — you don't apply separately per school.",
+    singleApplication: true,
+    unis:[
+      {uni:"University of Glasgow", deadline:"2026-10-30", confidence:"confirmed"},
+      {uni:"University of York", deadline:"2026-10-30", confidence:"confirmed"},
+      {uni:"University of Southampton", deadline:"2026-10-30", confidence:"confirmed"},
+      {uni:"Imperial College London", deadline:"2026-10-30", confidence:"confirmed"},
+      {uni:"University of Bristol", deadline:"2026-10-30", confidence:"confirmed"},
+      {uni:"University of Warwick", deadline:"2026-10-30", confidence:"confirmed"},
+    ] },
+  { key:"clarendon", name:"Clarendon Scholarship",
+    notes:"Oxford-specific. Automatic — no separate application, you're considered when you apply to the course by its own January deadline.",
+    unis:[ {uni:"University of Oxford", deadline:"2027-01-31", confidence:"confirmed"} ] },
+  { key:"bristolsanct", name:"Bristol Academic Solidarity with Palestine (Sanctuary Scholarship)",
+    notes:"Application drafted incorporating Isambard-AI supercomputer details.", defaultResponse:"Preparing",
+    unis:[ {uni:"University of Bristol", deadline:"", confidence:"unverified", extraNote:"No fixed public deadline found for this Bristol scheme — confirm directly with Bristol's scholarships office."} ] },
+  { key:"cma", name:"CMA CGM Scholarship",
+    notes:"Offered at Oxford, Imperial, King's College London and Bath only.",
+    unis:[
+      {uni:"University of Oxford", deadline:"", confidence:"unverified", extraNote:"Oxford is a confirmed CMA CGM partner for 2026/27 but no specific deadline was published separately from the course deadline — check with Oxford directly."},
+      {uni:"Imperial College London", deadline:"2027-03-04", confidence:"estimated"},
+      {uni:"King's College London", deadline:"2027-04-24", confidence:"estimated"},
+      {uni:"University of Bath", deadline:"2027-04-08", confidence:"estimated"},
+    ] },
+  { key:"spark", name:"Spark AI Scholarship",
+    notes:"Not offered at Cambridge or Manchester (both excluded from shortlist). Could not verify a public deadline for this fund at any of its universities — confirm details directly.",
+    unis:[
+      {uni:"University of Bristol", deadline:"", confidence:"unverified"},
+      {uni:"Imperial College London", deadline:"", confidence:"unverified"},
+      {uni:"UCL", deadline:"", confidence:"unverified"},
+      {uni:"Newcastle University", deadline:"", confidence:"unverified"},
+      {uni:"University of Edinburgh", deadline:"", confidence:"unverified"},
+      {uni:"University of Oxford", deadline:"", confidence:"unverified"},
+      {uni:"University of Southampton", deadline:"", confidence:"unverified"},
+    ] },
+  { key:"optiver", name:"Optiver Scholarship",
+    notes:"Oxford-specific, for women in STEM. Automatic — apply for the course by its own deadline (typically Dec/Jan) and you're considered.",
+    unis:[ {uni:"University of Oxford", deadline:"2027-01-31", confidence:"estimated", extraNote:"No separate scholarship deadline — tracks the course's own December/January admissions deadline, same window as Clarendon."} ] },
+  { key:"pal", name:"Palestinian Scholarship",
+    notes:"Covers Glasgow, Sheffield, Leeds, Sussex.",
+    unis:[
+      {uni:"University of Glasgow", deadline:"", confidence:"unverified", extraNote:"Couldn't confirm a Glasgow scheme separate from its Humanitarian Scholarship — may be the same route."},
+      {uni:"University of Sheffield", deadline:"2027-05-27", confidence:"estimated", extraNote:"Sheffield's Gaza-Palestine Postgraduate Taught Scholarship."},
+      {uni:"University of Leeds", deadline:"2027-03-31", confidence:"estimated", extraNote:"Leeds' Gazan Humanitarian Scholarship — needs an UNCONDITIONAL offer by this date."},
+      {uni:"University of Sussex", deadline:"2027-06-01", confidence:"confirmed", extraNote:"Sussex's Scholarships for Palestine."},
+    ] },
+  { key:"dima", name:"Dima Alhaj Scholarship (Phoenix Space)",
+    notes:"Primary funding route for Glasgow. Reserve candidate status; mid-July notification window mentioned previously — confirm current status. Could not find a public deadline for this fund.",
+    unis:[ {uni:"University of Glasgow", deadline:"", confidence:"unverified"} ] },
+  { key:"inter", name:"Interstellar Scholarship (Phoenix Space)",
+    notes:"Offered at Oxford, Imperial and UCL only. Could not find a public deadline for this fund.",
+    unis:[
+      {uni:"University of Oxford", deadline:"", confidence:"unverified"},
+      {uni:"Imperial College London", deadline:"", confidence:"unverified"},
+      {uni:"UCL", deadline:"", confidence:"unverified"},
+    ] },
+];
+
+const SCHOLARSHIPS = [];
+SCHOLARSHIP_GROUPS.forEach(g=>{
+  if(g.singleApplication){
+    const first = g.unis[0];
+    SCHOLARSHIPS.push({
+      id: "sch_" + g.key,
+      name: g.name,
+      uni: "All partner universities",
+      eligibleUnis: g.unis.map(u=>u.uni),
+      notes: g.notes,
+      defaultResponse: g.defaultResponse,
+      researchedDeadline: first.deadline || "",
+      confidence: first.confidence,
+    });
+  } else {
+    g.unis.forEach(u=>{
+      SCHOLARSHIPS.push({
+        id: "sch_" + g.key + "_" + slug(u.uni),
+        name: g.name,
+        uni: u.uni,
+        notes: g.notes + (u.extraNote ? (" " + u.extraNote) : ""),
+        defaultResponse: g.defaultResponse,
+        researchedDeadline: u.deadline || "",
+        confidence: u.confidence,
+      });
+    });
+  }
+});
+function getProgramScholarships(p){
+  return getAllScholarships().filter(s=>
+    s.uni===p.uni || (s.eligibleUnis && s.eligibleUnis.includes(p.uni))
+  );
+}
+function getAllPrograms(){
+  return PROGRAMS.concat(overrides.customPrograms||[]).filter(p=>!(overrides.removed.programs||[]).includes(p.id));
+}
+function getAllDocs(){
+  return DOCS.concat(overrides.customDocs||[]).filter(d=>!(overrides.removed.docs||[]).includes(d.id));
+}
+function getAllScholarships(){
+  return SCHOLARSHIPS.concat(overrides.customScholarships||[]).filter(s=>!(overrides.removed.scholarships||[]).includes(s.id));
+}
+function isCustom(id){ return /^(cp|cd|cs)_/.test(id); }
+
+const CONTACTS = [
+  { id:"con_alice", name:"Alice Graham", email:"", program:"University of Glasgow — MSc Robotics and AI",
+    role:"MENA / Outreach Team", notes:"Primary MENA team contact at Glasgow; outreach emails already drafted/sent." },
+];
+
+// portalOpen: an ISO date string if the portal has a known "opens on" date; null if already live or unknown.
+const PROGRAMS = [
+  { id:"p01", uni:"University of Glasgow", program:"MSc Robotics and AI", status:"Wishlist", portalUrl:"", portalNote:"", portalOpen:null,
+    moi:"Yes", duo:null, ellt:null, scholarships:["sch_bseisu","sch_human","sch_said","sch_pal","sch_dima"], contact:"con_alice",
+    notes:"MENA team contact: Alice Graham." },
+  { id:"p02", uni:"University of Leicester", program:"Artificial Intelligence MSc", status:"Wishlist", portalUrl:"", portalNote:"", portalOpen:null,
+    moi:null, duo:105, ellt:null, scholarships:[], notes:"" },
+  { id:"p03", uni:"University of York", program:"MSc Intelligent Robotics", status:"Wishlist", portalUrl:"", portalNote:"", portalOpen:null,
+    moi:null, duo:105, ellt:null, scholarships:["sch_said"], notes:"" },
+  { id:"p04", uni:"University of St Andrews", program:"Artificial Intelligence MSc", status:"Wishlist", portalUrl:"", portalNote:"", portalOpen:null,
+    moi:null, duo:140, ellt:9, scholarships:[], notes:"" },
+  { id:"p05", uni:"University of Sussex", program:"Robotics and Autonomous Systems MSc", status:"Preparing",
+    portalUrl:"https://sussexacuk.elluciancrmrecruit.com/Apply/Account/Login?ReturnUrl=%2fApply%2fApplication%2fApplication%3fnewTab%3d1%26ApplicationId%3d7b782986-66ac-f111-8ab1-061a4f2e9f15&newTab=1&ApplicationId=7b782986-66ac-f111-8ab1-061a4f2e9f15",
+    portalNote:"", portalOpen:null, moi:null, duo:110, ellt:6, scholarships:["sch_pal"], notes:"" },
+  { id:"p06", uni:"University of Surrey", program:"Computer Vision, Robotics and Machine Learning", status:"Wishlist", portalUrl:"", portalNote:"", portalOpen:null,
+    moi:null, duo:120, ellt:7, scholarships:[], notes:"" },
+  { id:"p07", uni:"University of Sheffield", program:"Robotics MSc", status:"Wishlist", portalUrl:"", portalNote:"Opens 15 Sep 2026", portalOpen:"2026-09-15",
+    moi:null, duo:null, ellt:7, scholarships:["sch_pal"], notes:"" },
+  { id:"p08", uni:"University of Bath", program:"Artificial Intelligence for Engineering and Design MSc", status:"Preparing",
+    portalUrl:"https://samis.bath.ac.uk/urd/sits.urd/run/siw_ipp_lgn.login?process=siw_ipp_app&code1=TDUEE-AE01&code2=0004",
+    portalNote:"", portalOpen:null, moi:"Highly Maybe", duo:null, ellt:null, scholarships:["sch_cma"], notes:"" },
+  { id:"p09", uni:"King's College London", program:"Robotics MSc", status:"Wishlist", portalUrl:"https://apply.kcl.ac.uk/", portalNote:"", portalOpen:null,
+    moi:null, duo:null, ellt:null, scholarships:["sch_bseisu","sch_cma"], notes:"" },
+  { id:"p10", uni:"University of Warwick", program:"Applied Artificial Intelligence", status:"Preparing",
+    portalUrl:"https://studentdata.warwick.ac.uk/urd/sits.urd/run/siw_ipp_lgn.login?process=siw_ipp_app&code1=P-H60X&code2=0003",
+    portalNote:"", portalOpen:null, moi:null, duo:120, ellt:null, scholarships:["sch_bseisu"], notes:"" },
+  { id:"p11", uni:"Ulster University", program:"Artificial Intelligence MSc", status:"Wishlist",
+    portalUrl:"https://international.ulster.ac.uk/s/login/", portalNote:"", portalOpen:null,
+    moi:null, duo:110, ellt:6, scholarships:[], notes:"" },
+  { id:"p12", uni:"University of Strathclyde", program:"MSc Autonomous Robotic Intelligent Systems", status:"Preparing",
+    portalUrl:"https://pegasus.mis.strath.ac.uk/myaccount/#/", portalNote:"", portalOpen:null,
+    moi:"Yes", duo:125, ellt:7, scholarships:[], notes:"" },
+  { id:"p13", uni:"University of Oxford", program:"MSc Autonomous Robotics", status:"Wishlist", portalUrl:"", portalNote:"Opens Oct 2026", portalOpen:"2026-10-01",
+    moi:null, duo:null, ellt:null, scholarships:["sch_spark","sch_cma","sch_optiver","sch_clarendon","sch_inter"], notes:"" },
+  { id:"p14", uni:"University of Birmingham", program:"Robotics MSc", status:"Preparing", portalUrl:"", portalNote:"", portalOpen:null,
+    moi:null, duo:null, ellt:7, scholarships:[], notes:"" },
+  { id:"p15", uni:"University of Aberdeen", program:"Robotics and Artificial Intelligence MSc", status:"Wishlist",
+    portalUrl:"https://www.abdn.ac.uk/apply/", portalNote:"", portalOpen:null, moi:null, duo:120, ellt:7, scholarships:[], notes:"" },
+  { id:"p16", uni:"University of Southampton", program:"MSc Robotics and Autonomous Systems", status:"Wishlist",
+    portalUrl:"https://engage-uos.powerappsportals.com/", portalNote:"", portalOpen:null,
+    moi:"Yes", duo:120, ellt:7, scholarships:["sch_said","sch_spark"], notes:"" },
+  { id:"p17", uni:"UCL", program:"Robotics and Artificial Intelligence MSc", status:"Wishlist", portalUrl:"", portalNote:"", portalOpen:null,
+    moi:null, duo:null, ellt:null, scholarships:["sch_spark","sch_bseisu","sch_human","sch_inter"], notes:"" },
+  { id:"p18", uni:"Queen's University Belfast", program:"MSc Robotics and Artificial Intelligence", status:"Wishlist", portalUrl:"", portalNote:"", portalOpen:null,
+    moi:null, duo:120, ellt:7, scholarships:[], notes:"" },
+  { id:"p19", uni:"University of Liverpool", program:"MSc Robotics, Automation and AI", status:"Wishlist", portalUrl:"", portalNote:"", portalOpen:null,
+    moi:null, duo:null, ellt:null, scholarships:[], notes:"" },
+  { id:"p20", uni:"Imperial College London", program:"MSc AI", status:"Wishlist", portalUrl:"", portalNote:"Opens 30 Sep 2026", portalOpen:"2026-09-30",
+    moi:null, duo:null, ellt:null, scholarships:["sch_said","sch_spark","sch_bseisu","sch_cma","sch_inter"], notes:"" },
+  { id:"p21", uni:"University of Leeds", program:"Mechatronics and Robotics Engineering MSc(Eng)", status:"Wishlist",
+    portalUrl:"https://uolaapadmprdb2c.b2clogin.com/5cef6b37-ab86-497d-ab34-ce62d6357766/b2c_1_signupsignin/oauth2/v2.0/authorize?client_id=a12fa54f-6bd5-4033-9f02-628414264230&redirect_uri=https%3A%2F%2Fmyleedsportal.leeds.ac.uk%2FB2C_1_signupsignin&response_type=code%20id_token&scope=openid",
+    portalNote:"", portalOpen:null, moi:null, duo:null, ellt:7, scholarships:["sch_pal"], notes:"" },
+  { id:"p22", uni:"University of Warwick", program:"MSc Smart Connected and Autonomous Vehicles", status:"Wishlist", portalUrl:"", portalNote:"", portalOpen:null,
+    moi:null, duo:120, ellt:null, scholarships:["sch_said","sch_bseisu"], notes:"" },
+  { id:"p23", uni:"University of Stirling", program:"MSc Artificial Intelligence", status:"Wishlist",
+    portalUrl:"https://portal.stir.ac.uk/student/course-application/pg/application.jsp?applicationKey=cf1b0cb3fc4af294c12f7797215c7cac86bc7946b58d0ef14cdb5c7f1d352989",
+    portalNote:"", portalOpen:null, moi:null, duo:null, ellt:6, scholarships:[], notes:"" },
+  { id:"p24", uni:"Newcastle University", program:"Robotics and Artificial Intelligence MSc", status:"Wishlist", portalUrl:"", portalNote:"", portalOpen:null,
+    moi:"Maybe", duo:125, ellt:null, scholarships:["sch_spark"], notes:"" },
+  { id:"p25", uni:"University of Edinburgh", program:"Artificial Intelligence MSc", status:"Wishlist", portalUrl:"", portalNote:"", portalOpen:null,
+    moi:null, duo:null, ellt:null, scholarships:["sch_spark","sch_bseisu"], notes:"" },
+  { id:"p26", uni:"University of Bristol", program:"MSc Robotics", status:"Wishlist", portalUrl:"", portalNote:"", portalOpen:null,
+    moi:"Yes", duo:null, ellt:null, scholarships:["sch_said","sch_spark","sch_bristol_sanct"], notes:"" },
+];
+
+const STATUS_OPTIONS = ["Wishlist","Preparing","Submitted","Interview","Offer","Accepted","Rejected","Declined"];
+const PRIORITY_OPTIONS = ["High","Medium","Low"];
+const DOC_STATUS_OPTIONS = ["Not Started","Drafting","Needs Tailoring","Ready"];
+const RESP_STATUS_OPTIONS = ["Not Applied","Preparing","Applied","Awaiting Decision","Awarded","Rejected"];
+
+/* ============================================================
+   STATE — merges defaults with anything saved to Firestore
+   ============================================================ */
+
+// Your Firebase project's config (from Firebase console → Project settings → Your apps).
+const firebaseConfig = {
+  apiKey: "AIzaSyDi_WTdQsnj9iCIb2EtumHUA_QgJ12wqJE",
+  authDomain: "grad-tracker-84c53.firebaseapp.com",
+  databaseURL: "https://grad-tracker-84c53-default-rtdb.firebaseio.com",
+  projectId: "grad-tracker-84c53",
+  storageBucket: "grad-tracker-84c53.firebasestorage.app",
+  messagingSenderId: "439785193948",
+  appId: "1:439785193948:web:941775b05ef4b918e68f19"
+};
+
+// One Firestore document holds every key. Reading fetches that whole document;
+// writing merges just the changed field so nothing else is overwritten.
+let firestoreDb = null;
+function firestoreDocRef(){ return firestoreDb.collection("gradtracker").doc("samar"); }
+
+function initFirebase(){
+  try{
+    if (typeof firebase === "undefined") return; // SDK script didn't load (offline, blocked, etc.)
+    if (!firebase.apps || !firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    firestoreDb = firebase.firestore();
+  }catch(e){
+    console.error("Firebase init failed — falling back to local storage.", e);
+    firestoreDb = null;
+  }
+}
+initFirebase();
+
+// Storage backend, tried in this order:
+//   1. Claude's own artifact storage (only present when viewed inside claude.ai)
+//   2. Firestore (your live, cross-device database)
+//   3. This browser's localStorage (last-resort fallback if Firestore can't load)
+const storageBackend = (function(){
+  if (window.storage && typeof window.storage.get === "function") {
+    return window.storage;
+  }
+  if (firestoreDb) {
+    return {
+      async get(key){
+        const snap = await firestoreDocRef().get();
+        const data = snap.exists ? snap.data() : {};
+        if (!(key in data)) throw new Error("not found: " + key);
+        return { key, value: data[key] };
+      },
+      async set(key, value){
+        await firestoreDocRef().set({ [key]: value }, { merge: true });
+        return { key, value };
+      }
+    };
+  }
+  return {
+    async get(key){
+      const raw = localStorage.getItem("gradtrack::" + key);
+      if (raw === null) throw new Error("not found: " + key);
+      return { key, value: raw };
+    },
+    async set(key, value){
+      localStorage.setItem("gradtrack::" + key, value);
+      return { key, value };
+    }
+  };
+})();
+
+let overrides = {
+  programs: {}, docs: {}, scholarships: {}, contacts: null,
+  customPrograms: [], customDocs: [], customScholarships: [],
+  removed: { programs: [], docs: [], scholarships: [] },
+};
+let ui = { tab:"dashboard", search:"", statusFilter:"All", openProgram:null, schSearch:"" };
+
+function progOverride(id){ return overrides.programs[id] || {}; }
+function docOverride(id){ return overrides.docs[id] || {}; }
+function schOverride(id){ return overrides.scholarships[id] || {}; }
+
+function getProgram(p){
+  const o = progOverride(p.id);
+  return Object.assign({
+    status: p.status, priority: "", deadline: "", portalUrlOverride:"",
+    actualDuo:"", actualEllt:"", moiStatus: p.moi || "", notes: p.notes || "", fee:"",
+    psStatus: "Not Started"
+  }, o);
+}
+function getDoc(d){
+  const o = docOverride(d.id);
+  return Object.assign({ status: d.defaultStatus, notes: d.defaultNotes || "" }, o);
+}
+function getSch(s){
+  const o = schOverride(s.id);
+  return Object.assign({
+    response: s.defaultResponse || "Not Applied", deadline: s.researchedDeadline || "", decisionDate:"",
+    eligibilityConfirmed:false, fundingCoverage:"", notes: s.notes || ""
+  }, o);
+}
+
+let saveTimer = null;
+function persist(kind){
+  const dot = document.getElementById("saveDot");
+  const txt = document.getElementById("saveText");
+  dot.classList.add("saving"); txt.textContent = "Saving…";
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(async ()=>{
+    try{
+      if(kind==="programs") await storageBackend.set("gradtrack_programs", JSON.stringify(overrides.programs));
+      if(kind==="docs") await storageBackend.set("gradtrack_docs", JSON.stringify(overrides.docs));
+      if(kind==="scholarships") await storageBackend.set("gradtrack_scholarships", JSON.stringify(overrides.scholarships));
+      if(kind==="contacts") await storageBackend.set("gradtrack_contacts", JSON.stringify(overrides.contacts));
+      if(kind==="customPrograms") await storageBackend.set("gradtrack_custom_programs", JSON.stringify(overrides.customPrograms));
+      if(kind==="customDocs") await storageBackend.set("gradtrack_custom_docs", JSON.stringify(overrides.customDocs));
+      if(kind==="customScholarships") await storageBackend.set("gradtrack_custom_scholarships", JSON.stringify(overrides.customScholarships));
+      if(kind==="removed") await storageBackend.set("gradtrack_removed", JSON.stringify(overrides.removed));
+      dot.classList.remove("saving"); txt.textContent = "Synced";
+    }catch(e){
+      dot.classList.remove("saving"); txt.textContent = "Save failed — changes kept in this session";
+      console.error("storage error", e);
+    }
+  }, 350);
+}
+
+async function loadAll(){
+  try{
+    const p = await storageBackend.get("gradtrack_programs").catch(()=>null);
+    if(p && p.value) overrides.programs = JSON.parse(p.value);
+  }catch(e){}
+  try{
+    const d = await storageBackend.get("gradtrack_docs").catch(()=>null);
+    if(d && d.value) overrides.docs = JSON.parse(d.value);
+  }catch(e){}
+  try{
+    const s = await storageBackend.get("gradtrack_scholarships").catch(()=>null);
+    if(s && s.value) overrides.scholarships = JSON.parse(s.value);
+  }catch(e){}
+  try{
+    const c = await storageBackend.get("gradtrack_contacts").catch(()=>null);
+    if(c && c.value) overrides.contacts = JSON.parse(c.value);
+  }catch(e){}
+  try{
+    const cp = await storageBackend.get("gradtrack_custom_programs").catch(()=>null);
+    if(cp && cp.value) overrides.customPrograms = JSON.parse(cp.value);
+  }catch(e){}
+  try{
+    const cd = await storageBackend.get("gradtrack_custom_docs").catch(()=>null);
+    if(cd && cd.value) overrides.customDocs = JSON.parse(cd.value);
+  }catch(e){}
+  try{
+    const cs = await storageBackend.get("gradtrack_custom_scholarships").catch(()=>null);
+    if(cs && cs.value) overrides.customScholarships = JSON.parse(cs.value);
+  }catch(e){}
+  try{
+    const r = await storageBackend.get("gradtrack_removed").catch(()=>null);
+    if(r && r.value) overrides.removed = JSON.parse(r.value);
+  }catch(e){}
+  if(!overrides.contacts) overrides.contacts = CONTACTS.slice();
+  render();
+}
+
+/* ============================================================
+   HELPERS
+   ============================================================ */
+
+function daysUntil(iso){
+  if(!iso) return null;
+  const d = new Date(iso+"T00:00:00");
+  return Math.round((d - TODAY) / 86400000);
+}
+function fmtDate(iso){
+  if(!iso) return "";
+  const d = new Date(iso+"T00:00:00");
+  return d.toLocaleDateString("en-GB",{ day:"numeric", month:"short", year:"numeric" });
+}
+function esc(s){
+  return String(s||"").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+function slug(id){ return id.replace(/[^a-zA-Z0-9_]/g,""); }
+function statusClass(status){
+  const map = { "Offer":"st-Offer" };
+  return "st-" + (map[status] || status.replace(/\s+/g,""));
+}
+function docCompleteness(){
+  const core = getAllDocs().filter(d=>d.core);
+  const ready = core.filter(d=>getDoc(d).status === "Ready").length;
+  return { ready, total: core.length, pct: core.length ? Math.round(ready/core.length*100) : 0 };
+}
+function portalState(p){
+  if(p.portalUrl || progOverride(p.id).portalUrlOverride) return "open";
+  if(p.portalOpen){ return daysUntil(p.portalOpen) <= 0 ? "open-now" : "soon"; }
+  return "none";
+}
+
+/* ============================================================
+   NAV
+   ============================================================ */
+
+const NAV_ITEMS = [
+  { id:"dashboard", label:"Mission Control" },
+  { id:"programs", label:"Programs" },
+  { id:"documents", label:"Documents" },
+  { id:"scholarships", label:"Scholarships" },
+  { id:"contacts", label:"Contacts" },
+  { id:"guide", label:"Guide" },
+];
+
+function renderNav(){
+  const nav = document.getElementById("nav");
+  nav.innerHTML = NAV_ITEMS.map(item=>{
+    let count = "";
+    if(item.id==="programs") count = getAllPrograms().length;
+    if(item.id==="documents") count = getAllDocs().length;
+    if(item.id==="scholarships") count = getAllScholarships().length;
+    if(item.id==="contacts") count = overrides.contacts.length;
+    return `<div class="nav-item ${ui.tab===item.id?'active':''}" data-tab="${item.id}">
+      <div class="dot"></div><span>${item.label}</span>
+      ${count!==""?`<span class="nav-count">${count}</span>`:""}
+    </div>`;
+  }).join("");
+  nav.querySelectorAll(".nav-item").forEach(el=>{
+    el.addEventListener("click", ()=>{ ui.tab = el.dataset.tab; render(); });
+  });
+}
+
+/* ============================================================
+   DASHBOARD
+   ============================================================ */
+
+function renderDashboard(){
+  const counts = {};
+  STATUS_OPTIONS.forEach(s=>counts[s]=0);
+  getAllPrograms().forEach(p=> counts[getProgram(p).status]++ );
+
+  const portalsSoon = getAllPrograms().filter(p=>portalState(p)==="soon")
+    .sort((a,b)=> daysUntil(a.portalOpen) - daysUntil(b.portalOpen));
+  const portalsOpen = getAllPrograms().filter(p=>portalState(p)==="open" || portalState(p)==="open-now").length;
+
+  const docStat = docCompleteness();
+
+  const noDeadlinePreparing = getAllPrograms().filter(p=>{
+    const g = getProgram(p);
+    return g.status !== "Wishlist" && !g.deadline;
+  });
+
+  const missingTests = getAllPrograms().filter(p=>{
+    const g = getProgram(p);
+    const needsDuo = p.duo && !g.actualDuo;
+    const needsEllt = p.ellt && !g.actualEllt;
+    return needsDuo || needsEllt;
+  });
+
+  const upcomingSch = getAllScholarships()
+    .map(s=>({ s, d: getSch(s).deadline }))
+    .filter(x=>x.d && daysUntil(x.d) >= 0 && daysUntil(x.d) <= 45)
+    .sort((a,b)=> daysUntil(a.d) - daysUntil(b.d));
+
+  const todos = [];
+  upcomingSch.slice(0,3).forEach(x=>{
+    todos.push({ tag:"tag-test", label:"SCHOLARSHIP", text:`${x.s.name} (${x.s.uni}) closes ${fmtDate(x.d)} — ${daysUntil(x.d)}d left.` });
+  });
+  portalsSoon.slice(0,3).forEach(p=>{
+    todos.push({ tag:"tag-portal", label:"PORTAL", text:`${p.uni} opens ${fmtDate(p.portalOpen)} (${daysUntil(p.portalOpen)}d) — check back and start the application.` });
+  });
+  if(docStat.pct < 100){
+    const notReady = getAllDocs().filter(d=>d.core).filter(d=>getDoc(d).status !== "Ready");
+    notReady.slice(0,2).forEach(d=>{
+      todos.push({ tag:"tag-doc", label:"DOC", text:`${d.name} — currently "${getDoc(d).status}". This blocks every program that needs it.` });
+    });
+  }
+  noDeadlinePreparing.slice(0,2).forEach(p=>{
+    todos.push({ tag:"tag-deadline", label:"DEADLINE", text:`${p.uni} is "${getProgram(p).status}" but has no deadline logged yet — find it on the portal.` });
+  });
+  missingTests.slice(0,2).forEach(p=>{
+    const need = p.duo ? `Duolingo ${p.duo}` : `Oxford ELLT ${p.ellt}`;
+    todos.push({ tag:"tag-test", label:"TEST", text:`${p.uni} needs ${need} — no score logged yet.` });
+  });
+
+  const dima = getAllScholarships().find(s=>s.name.includes("Dima Alhaj"));
+  if(dima && getSch(dima).response === "Not Applied"){
+    todos.unshift({ tag:"tag-test", label:"SCHOLARSHIP", text:"Dima Alhaj Scholarship (Glasgow) — reserve candidate status mentioned; worth confirming where that notification stands." });
+  }
+
+  const ringPct = docStat.pct;
+  const ringDeg = ringPct * 3.6;
+
+  document.getElementById("main").innerHTML = `
+    <div class="page-head">
+      <h1>Mission Control</h1>
+      <p>${getAllPrograms().length} programs, ${getAllScholarships().length} scholarships, one shared document set. Here's where things stand today (${TODAY.toLocaleDateString("en-GB",{day:"numeric",month:"long",year:"numeric"})}).</p>
+    </div>
+
+    <div class="kpi-row">
+      <div class="kpi"><div class="num">${getAllPrograms().length}</div><div class="lbl">Total programs</div><div class="sub">${counts.Wishlist} wishlist · ${counts.Preparing} preparing</div></div>
+      <div class="kpi"><div class="num">${portalsOpen}</div><div class="lbl">Portals live now</div><div class="sub">${portalsSoon.length} more opening soon</div></div>
+      <div class="kpi"><div class="num">${docStat.ready}/${docStat.total}</div><div class="lbl">Core documents ready</div><div class="sub">Shared across every program</div></div>
+      <div class="kpi"><div class="num">${getAllScholarships().filter(s=>getSch(s).response!=="Not Applied").length}/${getAllScholarships().length}</div><div class="lbl">Scholarships in motion</div><div class="sub">${getAllScholarships().length - getAllScholarships().filter(s=>getSch(s).response!=="Not Applied").length} not yet started</div></div>
+    </div>
+
+    <div class="two-col">
+      <div class="panel">
+        <h2>Next actions <span class="n">auto-generated</span></h2>
+        ${todos.length ? todos.map(t=>`
+          <div class="todo-item"><span class="todo-tag ${t.tag}">${t.label}</span><span>${esc(t.text)}</span></div>
+        `).join("") : `<div class="empty">Nothing urgent — nice work.</div>`}
+      </div>
+
+      <div class="panel">
+        <h2>Document readiness</h2>
+        <div class="ring-wrap">
+          <svg class="ring" width="76" height="76" viewBox="0 0 76 76">
+            <circle cx="38" cy="38" r="32" fill="none" stroke="#1b2839" stroke-width="8"/>
+            <circle cx="38" cy="38" r="32" fill="none" stroke="#55c2d6" stroke-width="8"
+              stroke-dasharray="${(ringPct/100*201).toFixed(1)} 201" stroke-linecap="round"
+              transform="rotate(-90 38 38)"/>
+          </svg>
+          <div class="ring-label"><b>${ringPct}%</b>of shared documents are marked Ready — this moves every program at once.</div>
+        </div>
+        <div style="margin-top:14px; display:flex; flex-direction:column; gap:7px;">
+          ${getAllDocs().filter(d=>d.core).map(d=>{
+            const g = getDoc(d);
+            return `<div style="display:flex; justify-content:space-between; font-size:12px;">
+              <span style="color:var(--text-dim)">${esc(d.name.split(' — ')[0].split(' base draft')[0])}</span>
+              <span style="color:${g.status==='Ready'?'var(--green)':'var(--text-faint)'}; font-family:var(--mono)">${g.status}</span>
+            </div>`;
+          }).join("")}
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Status breakdown</h2>
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        ${STATUS_OPTIONS.map(s=>`
+          <div style="flex:1; min-width:110px; background:#0e1826; border:1px solid var(--line-soft); border-radius:8px; padding:10px 12px;">
+            <div style="font-family:var(--mono); font-size:20px; font-weight:600;">${counts[s]}</div>
+            <div style="font-size:11.5px; color:var(--text-dim); margin-top:2px;">${s}</div>
+          </div>
+        `).join("")}
+      </div>
+    </div>
+  `;
+}
+
+/* ============================================================
+   getAllPrograms()
+   ============================================================ */
+
+function schChips(ids){
+  return ids.map(id=>{
+    const s = getAllScholarships().find(x=>x.id===id);
+    return s ? `<span class="tag sch">${esc(s.name)}</span>` : "";
+  }).join("");
+}
+
+function renderPrograms(){
+  const search = ui.search.toLowerCase();
+  let list = getAllPrograms().filter(p=>{
+    const g = getProgram(p);
+    if(ui.statusFilter !== "All" && g.status !== ui.statusFilter) return false;
+    if(search && !(p.uni.toLowerCase().includes(search) || p.program.toLowerCase().includes(search))) return false;
+    return true;
+  });
+
+  document.getElementById("main").innerHTML = `
+    <div class="page-head">
+      <h1>Programs</h1>
+      <p>Click a row to expand it. Every field you change is saved automatically.</p>
+    </div>
+    <div class="toolbar">
+      <input type="text" class="search" id="progSearch" placeholder="Search university or program…" value="${esc(ui.search)}">
+      <div class="chip-toggle" id="statusChips">
+        ${["All",...STATUS_OPTIONS].map(s=>`<div class="chip ${ui.statusFilter===s?'active':''}" data-status="${s}">${s}</div>`).join("")}
+      </div>
+      <div class="spacer"></div>
+      <span style="font-size:12px; color:var(--text-faint); font-family:var(--mono);">${list.length} shown</span>
+      <button class="btn small" id="addProgram">+ Add program</button>
+    </div>
+    <div class="program-list" id="progList">
+      ${list.length ? list.map(renderProgramCard).join("") : `<div class="empty">No programs match that filter.</div>`}
+    </div>
+  `;
+
+  document.getElementById("addProgram").addEventListener("click", ()=>{
+    const id = "cp_" + Date.now();
+    overrides.customPrograms.push({
+      id, uni:"New University", program:"New Program", status:"Wishlist",
+      portalUrl:"", portalNote:"", portalOpen:null, moi:null, duo:null, ellt:null, notes:""
+    });
+    persist("customPrograms");
+    ui.openProgram = id;
+    renderPrograms();
+  });
+
+  document.getElementById("progSearch").addEventListener("input", e=>{ ui.search = e.target.value; renderPrograms(); });
+  document.getElementById("statusChips").querySelectorAll(".chip").forEach(el=>{
+    el.addEventListener("click", ()=>{ ui.statusFilter = el.dataset.status; renderPrograms(); });
+  });
+
+  document.querySelectorAll(".program-head").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const id = el.dataset.id;
+      ui.openProgram = ui.openProgram === id ? null : id;
+      renderPrograms();
+    });
+  });
+
+  wireProgramInputs();
+}
+
+function renderProgramCard(p){
+  const g = getProgram(p);
+  const pstate = portalState(p);
+  const isOpen = ui.openProgram === p.id;
+  let portalBadge = `<span class="portal-flag pf-none">no portal yet</span>`;
+  if(pstate === "open" || pstate === "open-now") portalBadge = `<span class="portal-flag pf-open">portal open</span>`;
+  if(pstate === "soon") portalBadge = `<span class="portal-flag pf-soon">opens in ${daysUntil(p.portalOpen)}d</span>`;
+
+  const reqTags = [];
+  if(p.duo) reqTags.push(`<span class="tag req">Duolingo ${p.duo}${g.actualDuo?` · you: ${esc(g.actualDuo)}`:''}</span>`);
+  if(p.ellt) reqTags.push(`<span class="tag req">Oxford ELLT ${p.ellt}${g.actualEllt?` · you: ${esc(g.actualEllt)}`:''}</span>`);
+  if(p.moi) reqTags.push(`<span class="tag req">MOI: ${esc(g.moiStatus||p.moi)}</span>`);
+
+  const portalUrl = progOverride(p.id).portalUrlOverride || p.portalUrl;
+  const custom = isCustom(p.id);
+  const progSchs = getProgramScholarships(p);
+
+  return `
+  <div class="program-card ${isOpen?'open':''}">
+    <div class="program-head" data-id="${p.id}">
+      <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <div style="flex:1; min-width:0;">
+        <div class="uni-name">${esc(p.uni)}</div>
+        <div class="prog-name">${esc(p.program)}</div>
+      </div>
+      ${portalBadge}
+      <span class="status-pill ${statusClass(g.status)}" id="status-pill-${p.id}">${g.status}</span>
+    </div>
+    <div class="program-body">
+      ${custom ? `
+      <div class="field-grid" style="margin-top:14px;">
+        <div class="field"><label>University name</label>
+          <input type="text" class="field" data-custom-field="uni" data-id="${p.id}" value="${esc(p.uni)}"></div>
+        <div class="field"><label>Program name</label>
+          <input type="text" class="field" data-custom-field="program" data-id="${p.id}" value="${esc(p.program)}"></div>
+      </div>` : ""}
+      <div class="tag-row">${reqTags.join("") || `<span class="tag">No English test / MOI condition on file</span>`}</div>
+      ${progSchs.length ? `<div class="tag-row">${schChips(progSchs.map(s=>s.id))}</div>` : ""}
+
+      <div class="field-grid">
+        <div class="field">
+          <label>Status</label>
+          <select data-field="status" data-id="${p.id}">
+            ${STATUS_OPTIONS.map(s=>`<option value="${s}" ${g.status===s?'selected':''}>${s}</option>`).join("")}
+          </select>
+        </div>
+        <div class="field">
+          <label>Priority</label>
+          <select data-field="priority" data-id="${p.id}">
+            <option value="">—</option>
+            ${PRIORITY_OPTIONS.map(s=>`<option value="${s}" ${g.priority===s?'selected':''}>${s}</option>`).join("")}
+          </select>
+        </div>
+        <div class="field">
+          <label>Application deadline</label>
+          <input type="date" data-field="deadline" data-id="${p.id}" value="${g.deadline||''}">
+        </div>
+
+        <div class="field" id="portal-field-${p.id}">
+          <label>Application portal</label>
+          ${portalUrl
+            ? `<button class="btn small" onclick="window.open('${portalUrl.replace(/'/g,"%27")}','_blank')">Open portal ↗</button>`
+            : `<input type="url" class="field" placeholder="Paste portal link once you find it" data-field="portalUrlOverride" data-id="${p.id}" value="${esc(g.portalUrlOverride)}">`
+          }
+          ${p.portalNote ? `<span style="font-size:11px; color:var(--text-faint); margin-top:2px;">${esc(p.portalNote)}</span>` : ""}
+        </div>
+        <div class="field">
+          <label>Duolingo — your score</label>
+          <input type="number" data-field="actualDuo" data-id="${p.id}" value="${esc(g.actualDuo)}" placeholder="${p.duo?('target '+p.duo):'not required'}">
+        </div>
+        <div class="field">
+          <label>Oxford ELLT — your band</label>
+          <input type="number" data-field="actualEllt" data-id="${p.id}" value="${esc(g.actualEllt)}" placeholder="${p.ellt?('target '+p.ellt):'not required'}">
+        </div>
+
+        <div class="field">
+          <label>MOI status</label>
+          <select data-field="moiStatus" data-id="${p.id}">
+            ${["", "Yes","Maybe","Highly Maybe","No","N/A"].map(s=>`<option value="${s}" ${((g.moiStatus||"")===s)?'selected':''}>${s||"—"}</option>`).join("")}
+          </select>
+        </div>
+        <div class="field">
+          <label>Application fee</label>
+          <input type="text" data-field="fee" data-id="${p.id}" value="${esc(g.fee)}" placeholder="e.g. £75">
+        </div>
+        <div class="field">
+          <label>Personal statement — tailored version</label>
+          <select data-field="psStatus" data-id="${p.id}">
+            ${PS_TAILOR_OPTIONS.map(s=>`<option value="${s}" ${g.psStatus===s?'selected':''}>${s}</option>`).join("")}
+          </select>
+        </div>
+      </div>
+
+      <textarea class="notes" data-field="notes" data-id="${p.id}" placeholder="Notes for ${esc(p.uni)}…">${esc(g.notes)}</textarea>
+      <div style="margin-top:12px;">
+        <button class="btn danger small" data-remove-program="${p.id}">Remove this program</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function wireProgramInputs(){
+  document.querySelectorAll("#progList [data-field][data-id]").forEach(el=>{
+    const evt = (el.tagName === "SELECT" || el.type === "date") ? "change" : "input";
+    el.addEventListener(evt, ()=>{
+      const id = el.dataset.id, field = el.dataset.field;
+      if(!overrides.programs[id]) overrides.programs[id] = {};
+      overrides.programs[id][field] = el.value;
+      persist("programs");
+
+      // Patch only the specific bit of UI that depends on this field —
+      // never tear down the control the user is actively interacting with.
+      if(field === "status"){
+        const pill = document.getElementById("status-pill-"+id);
+        if(pill){ pill.textContent = el.value; pill.className = "status-pill " + statusClass(el.value); }
+      } else if(field === "portalUrlOverride"){
+        const wrap = document.getElementById("portal-field-"+id);
+        if(wrap && el.value){
+          const p = getAllPrograms().find(x=>x.id===id);
+          wrap.innerHTML = `<label>Application portal</label>
+            <button class="btn small" onclick="window.open('${el.value.replace(/'/g,"%27")}','_blank')">Open portal ↗</button>
+            ${p.portalNote ? `<span style="font-size:11px; color:var(--text-faint); margin-top:2px;">${esc(p.portalNote)}</span>` : ""}`;
+        }
+      }
+      // deadline, actualDuo, actualEllt, moiStatus, fee, psStatus, notes: value is
+      // already reflected in the control itself — nothing else on this page shows it.
+    });
+  });
+
+  document.querySelectorAll("#progList [data-custom-field][data-id]").forEach(el=>{
+    el.addEventListener("input", ()=>{
+      const cp = overrides.customPrograms.find(x=>x.id===el.dataset.id);
+      if(cp){
+        cp[el.dataset.customField] = el.value;
+        persist("customPrograms");
+        const card = el.closest(".program-card");
+        if(card){
+          card.querySelector(".uni-name").textContent = cp.uni;
+          card.querySelector(".prog-name").textContent = cp.program;
+        }
+      }
+    });
+  });
+
+  document.querySelectorAll("#progList [data-remove-program]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const id = el.dataset.removeProgram;
+      const p = getAllPrograms().find(x=>x.id===id);
+      if(!confirm(`Remove ${p ? p.uni + " — " + p.program : "this program"}? This can't be undone.`)) return;
+      if(isCustom(id)){
+        overrides.customPrograms = overrides.customPrograms.filter(x=>x.id!==id);
+        persist("customPrograms");
+      } else {
+        overrides.removed.programs.push(id);
+        persist("removed");
+      }
+      ui.openProgram = null;
+      renderPrograms();
+    });
+  });
+}
+
+/* ============================================================
+   DOCUMENTS
+   ============================================================ */
+
+function renderDocuments(){
+  const requiredDocs = getAllDocs().filter(d=>d.core);
+  const optionalDocs = getAllDocs().filter(d=>!d.core);
+  const tailored = getAllPrograms().filter(p=>getProgram(p).psStatus === "Ready").length;
+  const tailoredPct = Math.round(tailored / getAllPrograms().length * 100);
+
+  document.getElementById("main").innerHTML = `
+    <div class="page-head">
+      <h1>Documents</h1>
+      <p>The items below are shared across every program — mark one Ready here and it updates readiness everywhere at once.</p>
+    </div>
+
+    <div class="panel">
+      <h2>Personal statement — tailoring by program <span class="n">not counted in the ring below</span></h2>
+      <p style="color:var(--text-dim); font-size:12.5px; margin:0 0 10px;">
+        The general draft here is the shared narrative every version starts from. Each of your ${getAllPrograms().length} programs needs its own tailored paragraph — track that per-program on the <a href="#" id="goToPrograms" style="color:var(--cyan);">Programs tab</a>.
+      </p>
+      <div class="ring-wrap">
+        <svg class="ring" width="60" height="60" viewBox="0 0 76 76">
+          <circle cx="38" cy="38" r="32" fill="none" stroke="#1b2839" stroke-width="8"/>
+          <circle cx="38" cy="38" r="32" fill="none" stroke="#a48bf0" stroke-width="8"
+            stroke-dasharray="${(tailoredPct/100*201).toFixed(1)} 201" stroke-linecap="round"
+            transform="rotate(-90 38 38)"/>
+        </svg>
+        <div class="ring-label"><b>${tailored}/${getAllPrograms().length}</b>tailored personal statements marked Ready.</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Required <span class="n">counts toward readiness</span></h2>
+      <div class="doc-grid">${requiredDocs.map(renderDocCard).join("")}</div>
+    </div>
+
+    <div class="panel">
+      <h2>Optional / program-specific <span class="n">tracked, not counted</span></h2>
+      <div class="doc-grid">${optionalDocs.map(renderDocCard).join("")}</div>
+      <button class="btn ghost small" id="addDoc" style="margin-top:10px;">+ Add document</button>
+    </div>
+  `;
+  document.getElementById("goToPrograms").addEventListener("click", e=>{ e.preventDefault(); ui.tab="programs"; render(); });
+  document.getElementById("addDoc").addEventListener("click", ()=>{
+    const id = "cd_" + Date.now();
+    overrides.customDocs.push({ id, name:"New document", type:"Other", scope:"", defaultStatus:"Not Started", defaultNotes:"", core:false });
+    persist("customDocs");
+    renderDocuments();
+  });
+  document.querySelectorAll("#main [data-field]").forEach(el=>{
+    const evt = el.tagName === "SELECT" ? "change" : "input";
+    el.addEventListener(evt, ()=>{
+      const id = el.dataset.id, field = el.dataset.field;
+      if(!overrides.docs[id]) overrides.docs[id] = {};
+      overrides.docs[id][field] = el.value;
+      persist("docs");
+      if(field === "status"){
+        const pill = document.getElementById("doc-pill-"+id);
+        const colors = { "Not Started":"var(--text-faint)","Drafting":"var(--amber)","Needs Tailoring":"var(--amber)","Ready":"var(--green)" };
+        if(pill){
+          pill.textContent = el.value;
+          pill.style.color = colors[el.value];
+          pill.style.borderColor = colors[el.value] + "44";
+          pill.style.background = colors[el.value] + "18";
+        }
+      }
+    });
+  });
+  document.querySelectorAll("#main [data-custom-field][data-id]").forEach(el=>{
+    el.addEventListener("input", ()=>{
+      const cd = overrides.customDocs.find(x=>x.id===el.dataset.id);
+      if(cd){ cd[el.dataset.customField] = el.value; persist("customDocs"); }
+    });
+  });
+  document.querySelectorAll("#main [data-remove-doc]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const id = el.dataset.removeDoc;
+      const d = getAllDocs().find(x=>x.id===id);
+      if(!confirm(`Remove "${d ? d.name : 'this document'}"? This can't be undone.`)) return;
+      if(isCustom(id)){
+        overrides.customDocs = overrides.customDocs.filter(x=>x.id!==id);
+        persist("customDocs");
+      } else {
+        overrides.removed.docs.push(id);
+        persist("removed");
+      }
+      renderDocuments();
+    });
+  });
+}
+
+function renderDocCard(d){
+  const g = getDoc(d);
+  const custom = isCustom(d.id);
+  const colors = { "Not Started":"var(--text-faint)","Drafting":"var(--amber)","Needs Tailoring":"var(--amber)","Ready":"var(--green)" };
+  return `
+  <div class="doc-card">
+    <div class="doc-top">
+      <div style="flex:1;">
+        ${custom
+          ? `<input type="text" class="field" style="width:100%; margin-bottom:4px;" data-custom-field="name" data-id="${d.id}" value="${esc(d.name)}">`
+          : `<div class="doc-name">${esc(d.name)}</div>`}
+        <div class="doc-type">${esc(d.type)}</div>
+      </div>
+      <span class="status-pill" id="doc-pill-${d.id}" style="color:${colors[g.status]}; border-color:${colors[g.status]}44; background:${colors[g.status]}18;">${g.status}</span>
+    </div>
+    <div class="doc-scope">${esc(d.scope)}</div>
+    <div class="doc-controls">
+      <select data-field="status" data-id="${d.id}">
+        ${DOC_STATUS_OPTIONS.map(s=>`<option value="${s}" ${g.status===s?'selected':''}>${s}</option>`).join("")}
+      </select>
+      <button class="btn danger small" data-remove-doc="${d.id}" style="margin-left:auto;">Remove</button>
+    </div>
+    <textarea class="notes" data-field="notes" data-id="${d.id}" placeholder="Notes…">${esc(g.notes)}</textarea>
+  </div>`;
+}
+
+/* ============================================================
+   getAllScholarships()
+   ============================================================ */
+
+function renderScholarships(){
+  const search = (ui.schSearch||"").toLowerCase();
+  const list = getAllScholarships().filter(s=>{
+    if(!search) return true;
+    return s.name.toLowerCase().includes(search) || s.uni.toLowerCase().includes(search);
+  }).slice().sort((a,b)=>{
+    const da = getSch(a).deadline, db = getSch(b).deadline;
+    if(da && db) return da < db ? -1 : 1;
+    if(da) return -1;
+    if(db) return 1;
+    return a.name.localeCompare(b.name);
+  });
+  document.getElementById("main").innerHTML = `
+    <div class="page-head">
+      <h1>Scholarships</h1>
+      <p>${getAllScholarships().length} applications across ${SCHOLARSHIP_GROUPS.length} funds — one row per university, since each runs its own process. Sorted by deadline.</p>
+    </div>
+    <div class="toolbar">
+      <input type="text" class="search" id="schSearch" placeholder="Search scholarship or university…" value="${esc(ui.schSearch||"")}">
+      <div class="spacer"></div>
+      <span style="font-size:12px; color:var(--text-faint); font-family:var(--mono);">${list.length} shown</span>
+      <button class="btn small" id="addSch">+ Add scholarship</button>
+    </div>
+    <div id="schList">${list.map(renderSchCard).join("")}</div>
+  `;
+  document.getElementById("addSch").addEventListener("click", ()=>{
+    const id = "cs_" + Date.now();
+    overrides.customScholarships.push({ id, name:"New scholarship", uni:"", notes:"", researchedDeadline:"", confidence:"unverified" });
+    persist("customScholarships");
+    renderScholarships();
+  });
+  document.getElementById("schSearch").addEventListener("input", e=>{ ui.schSearch = e.target.value; renderScholarships(); });
+  document.querySelectorAll("#schList [data-field]").forEach(el=>{
+    const evt = (el.tagName === "SELECT" || el.type === "date" || el.type === "checkbox") ? "change" : "input";
+    el.addEventListener(evt, ()=>{
+      const id = el.dataset.id, field = el.dataset.field;
+      if(!overrides.scholarships[id]) overrides.scholarships[id] = {};
+      overrides.scholarships[id][field] = el.type === "checkbox" ? el.checked : el.value;
+      persist("scholarships");
+      if(field === "response"){
+        const pill = document.getElementById("resp-pill-"+id);
+        if(pill){ pill.textContent = el.value; pill.className = "status-pill resp-" + el.value.replace(/\s+/g,'-'); }
+      }
+    });
+  });
+  document.querySelectorAll("#schList [data-custom-field][data-id]").forEach(el=>{
+    el.addEventListener("input", ()=>{
+      const cs = overrides.customScholarships.find(x=>x.id===el.dataset.id);
+      if(cs){ cs[el.dataset.customField] = el.value; persist("customScholarships"); }
+    });
+  });
+  document.querySelectorAll("#schList [data-remove-sch]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const id = el.dataset.removeSch;
+      const s = getAllScholarships().find(x=>x.id===id);
+      if(!confirm(`Remove "${s ? s.name + ' — ' + s.uni : 'this scholarship'}"? This can't be undone.`)) return;
+      if(isCustom(id)){
+        overrides.customScholarships = overrides.customScholarships.filter(x=>x.id!==id);
+        persist("customScholarships");
+      } else {
+        overrides.removed.scholarships.push(id);
+        persist("removed");
+      }
+      renderScholarships();
+    });
+  });
+}
+
+function renderSchCard(s){
+  const g = getSch(s);
+  const custom = isCustom(s.id);
+  const confBadge = {
+    confirmed: `<span class="tag" style="color:var(--green); border-color:#245c3f; background:#173a2922;">confirmed for 2027/28</span>`,
+    estimated: `<span class="tag" style="color:var(--amber); border-color:#5a4520; background:#2a201022;">estimated (+1yr from 2026/27)</span>`,
+    unverified: `<span class="tag" style="color:var(--red); border-color:#5c2a34; background:#3a1c2222;">deadline not found — verify</span>`,
+  }[s.confidence] || "";
+  return `
+  <div class="sch-card">
+    <div class="sch-head">
+      <div style="flex:1;">
+        ${custom ? `
+          <div class="field-grid" style="grid-template-columns:1fr 1fr; margin-bottom:8px;">
+            <div class="field"><label>Scholarship name</label>
+              <input type="text" class="field" data-custom-field="name" data-id="${s.id}" value="${esc(s.name)}"></div>
+            <div class="field"><label>University</label>
+              <input type="text" class="field" data-custom-field="uni" data-id="${s.id}" value="${esc(s.uni)}"></div>
+          </div>
+        ` : `<div class="sch-name">${esc(s.name)} <span style="color:var(--text-faint); font-weight:400;">— ${esc(s.uni)}</span></div>`}
+        <div class="sch-note">${esc(s.notes)}</div>
+        <div class="tag-row">
+          ${confBadge}
+          ${s.eligibleUnis ? s.eligibleUnis.map(u=>`<span class="tag">${esc(u)}</span>`).join("") : ""}
+        </div>
+      </div>
+      <span class="status-pill resp-${g.response.replace(/\s+/g,'-')}" id="resp-pill-${s.id}" style="border:1px solid currentColor; background:transparent;">${g.response}</span>
+    </div>
+    <div class="sch-grid">
+      <div class="field"><label>Response status</label>
+        <select data-field="response" data-id="${s.id}">
+          ${RESP_STATUS_OPTIONS.map(o=>`<option value="${o}" ${g.response===o?'selected':''}>${o}</option>`).join("")}
+        </select>
+      </div>
+      <div class="field"><label>Application deadline</label>
+        <input type="date" data-field="deadline" data-id="${s.id}" value="${g.deadline||''}">
+      </div>
+      <div class="field"><label>Decision date</label>
+        <input type="date" data-field="decisionDate" data-id="${s.id}" value="${g.decisionDate||''}">
+      </div>
+      <div class="field"><label>Funding coverage</label>
+        <input type="text" data-field="fundingCoverage" data-id="${s.id}" value="${esc(g.fundingCoverage)}" placeholder="e.g. full tuition">
+      </div>
+    </div>
+    <label style="display:flex; align-items:center; gap:7px; margin-top:10px; font-size:12.5px; color:var(--text-dim);">
+      <input type="checkbox" data-field="eligibilityConfirmed" data-id="${s.id}" ${g.eligibilityConfirmed?'checked':''}> Eligibility confirmed with provider
+    </label>
+    <textarea class="notes" data-field="notes" data-id="${s.id}">${esc(g.notes)}</textarea>
+    <div style="margin-top:10px;">
+      <button class="btn danger small" data-remove-sch="${s.id}">Remove this scholarship</button>
+    </div>
+  </div>`;
+}
+
+/* ============================================================
+   CONTACTS
+   ============================================================ */
+
+function renderContacts(){
+  document.getElementById("main").innerHTML = `
+    <div class="page-head">
+      <h1>Contacts</h1>
+      <p>People you're in touch with at each institution.</p>
+    </div>
+    <div id="contactList">${overrides.contacts.map(renderContactCard).join("")}</div>
+    <button class="btn ghost" id="addContact">+ Add contact</button>
+  `;
+  document.getElementById("addContact").addEventListener("click", ()=>{
+    overrides.contacts.push({ id:"con_"+Date.now(), name:"New contact", email:"", program:"", role:"", notes:"" });
+    persist("contacts");
+    renderContacts();
+  });
+  document.querySelectorAll("#contactList [data-field]").forEach(el=>{
+    el.addEventListener("input", ()=>{
+      const idx = overrides.contacts.findIndex(c=>c.id===el.dataset.id);
+      if(idx>-1){ overrides.contacts[idx][el.dataset.field] = el.value; persist("contacts"); }
+    });
+  });
+  document.querySelectorAll("#contactList [data-remove]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      overrides.contacts = overrides.contacts.filter(c=>c.id!==el.dataset.remove);
+      persist("contacts");
+      renderContacts();
+    });
+  });
+}
+
+function renderContactCard(c){
+  const initials = (c.name||"?").split(" ").map(w=>w[0]).slice(0,2).join("").toUpperCase();
+  return `
+  <div class="contact-card">
+    <div class="avatar">${esc(initials)}</div>
+    <div style="flex:1; min-width:220px; display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+      <input type="text" class="field" data-field="name" data-id="${c.id}" value="${esc(c.name)}" placeholder="Name">
+      <input type="text" class="field" data-field="email" data-id="${c.id}" value="${esc(c.email)}" placeholder="Email">
+      <input type="text" class="field" data-field="program" data-id="${c.id}" value="${esc(c.program)}" placeholder="Program / university">
+      <input type="text" class="field" data-field="role" data-id="${c.id}" value="${esc(c.role)}" placeholder="Role">
+    </div>
+    <textarea class="notes" style="flex:1; min-width:220px;" data-field="notes" data-id="${c.id}" placeholder="Notes…">${esc(c.notes)}</textarea>
+    <button class="btn danger small" data-remove="${c.id}">Remove</button>
+  </div>`;
+}
+
+/* ============================================================
+   GUIDE
+   ============================================================ */
+
+function renderGuide(){
+  const items = [
+    ["Status", "Wishlist → Preparing → Submitted → Interview → Offer → Accepted / Rejected / Declined. Click a program to expand it, then change Status there — it updates immediately."],
+    ["Shared documents", "Transcript, both required LORs, Duolingo, Oxford ELLT, MOI letter, graduation letter and CV are used by almost every program. Update them once on the Documents tab instead of 26 times. Two extra LOR slots are tracked too but don't count toward the readiness ring, since not every program asks for more than two."],
+    ["Personal statement", "The Documents tab holds the general base draft everyone starts from. Each program also needs its own tailored paragraph — that's tracked per-program on the Programs tab, and the aggregate shows at the top of Documents."],
+    ["MOI", "Medium of Instruction letter — proof your degree was taught in English, sometimes accepted instead of an English test. \"Yes\" means UCAS can issue one; \"Maybe\"/\"Highly Maybe\" means it's unconfirmed."],
+    ["Duolingo / Oxford ELLT", "Minimum scores each program has set. Log your actual score once you sit the test and the card shows target vs. actual side by side. The Documents tab separately tracks whether you've obtained the official score report itself."],
+    ["Scholarships", "Split one row per university, since each runs its own application even when the same foundation funds several schools. Deadlines are tagged: confirmed (published for your 2027/28 cycle), estimated (last cycle's date shifted forward a year), or not found — verify directly with the provider."],
+    ["Portals", "Programs with a known link show an \"Open portal\" button. Programs where the portal isn't public yet show a countdown; paste a link in once you find one and it becomes a button."],
+    ["Saving", "Everything you type is saved automatically — reopen this file anytime and your data will be there."],
+  ];
+  document.getElementById("main").innerHTML = `
+    <div class="page-head"><h1>Guide</h1><p>How this tracker is put together.</p></div>
+    <div class="panel">
+      ${items.map(([h,t])=>`<div class="guide-item"><h3>${esc(h)}</h3><p>${esc(t)}</p></div>`).join("")}
+    </div>
+  `;
+}
+
+/* ============================================================
+   RENDER ROUTER
+   ============================================================ */
+
+function render(){
+  renderNav();
+  if(ui.tab==="dashboard") renderDashboard();
+  else if(ui.tab==="programs") renderPrograms();
+  else if(ui.tab==="documents") renderDocuments();
+  else if(ui.tab==="scholarships") renderScholarships();
+  else if(ui.tab==="contacts") renderContacts();
+  else if(ui.tab==="guide") renderGuide();
+}
+
+/* ============================================================
+   EXPORT / IMPORT — carry your data between browsers, laptops, people
+   ============================================================ */
+
+function exportData(){
+  const payload = {
+    _type: "gradtrack-backup", exportedAt: new Date().toISOString(),
+    programs: overrides.programs, docs: overrides.docs, scholarships: overrides.scholarships,
+    contacts: overrides.contacts, customPrograms: overrides.customPrograms,
+    customDocs: overrides.customDocs, customScholarships: overrides.customScholarships,
+    removed: overrides.removed,
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "grad-tracker-backup-" + new Date().toISOString().slice(0,10) + ".json";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+async function importDataFromFile(file){
+  let data;
+  try{
+    data = JSON.parse(await file.text());
+  }catch(e){
+    alert("That file doesn't look like a valid backup — couldn't read it as JSON.");
+    return;
+  }
+  if(!data || typeof data !== "object"){
+    alert("That file doesn't look like a valid backup.");
+    return;
+  }
+  if(!confirm("Importing will replace everything currently in this tracker with the backup's data. Continue?")) return;
+
+  overrides.programs = data.programs || {};
+  overrides.docs = data.docs || {};
+  overrides.scholarships = data.scholarships || {};
+  overrides.contacts = data.contacts || CONTACTS.slice();
+  overrides.customPrograms = data.customPrograms || [];
+  overrides.customDocs = data.customDocs || [];
+  overrides.customScholarships = data.customScholarships || [];
+  overrides.removed = data.removed || { programs: [], docs: [], scholarships: [] };
+
+  persist("programs"); persist("docs"); persist("scholarships"); persist("contacts");
+  persist("customPrograms"); persist("customDocs"); persist("customScholarships"); persist("removed");
+  ui = { tab:"dashboard", search:"", statusFilter:"All", openProgram:null, schSearch:"" };
+  render();
+  alert("Backup imported.");
+}
+
+document.getElementById("exportBtn").addEventListener("click", exportData);
+document.getElementById("importBtn").addEventListener("click", ()=> document.getElementById("importFile").click());
+document.getElementById("importFile").addEventListener("change", e=>{
+  const file = e.target.files[0];
+  if(file) importDataFromFile(file);
+  e.target.value = "";
+});
+
+loadAll();
+
+})();
+</script>
+</body>
+</html>
